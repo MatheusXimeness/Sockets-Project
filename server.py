@@ -1,11 +1,14 @@
+# Manoela Werneck 95664
+# Matheus Ximenes 95666
+
 import socket
 import threading
+import os
 
 HOST = ''
 PORT = 20000
 
 udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-#udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 udp.bind((HOST, PORT))
 
 clients = {}    # guarda tupla (IP, porta) e nome de clientes ativos no momento
@@ -21,20 +24,29 @@ def receiveFile(con, name):
         data = con.recv(1024)
         if not data:
             break
-        f.write(data)
+        f.write(data)   # enquanto houver dados a receber, escreve os dados no arquivo
     f.close()
+    print("Arquivo recebido.")
 
     return
 
 def sendFile(con, name):
-    f = open(name,'rb')
-    for msg in f.readlines():
-        con.send(msg)
-    f.close()
+    error = ''
+    try:
+        f = open(name,'rb')
+        for msg in f.readlines():   # enquanto houver dados, le e escreve no arquivo
+            con.send(msg)
+        f.close()
+        print('Arquivo enviado.')
+    except FileNotFoundError:
+        error = 'INFO:Esse arquivo não está disponível'
+        print('Arquivo indisponível')
 
-    return
+    return error
 
+# funcao que executa uma acao conforme o protocolo
 def receive():
+
     while True:
         tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         tcp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -63,22 +75,25 @@ def receive():
         elif msg[0] == 'FILE':
             con, clientTCP = tcp.accept()
             receiveFile(con, msg[1])
-            print("Arquivo recebido.")
             text = 'INFO:' + clients[client] + ' enviou ' + msg[1]
             forwardMessage(text, client)
             con.close()
 
         elif msg[0] == 'GET':
             con, clientTCP = tcp.accept()
-            sendFile(con, msg[1])
-            print('Arquivo enviado.')
+            text = sendFile(con, msg[1])
+            if len(text):
+                udp.sendto(text.encode(), client) # se a funcao retornar texto de erro envia para o cliente
             con.close()
 
         elif msg[0] == 'BYE':
             text = 'INFO:' + clients[client] + ' saiu'
             forwardMessage(text, client)
             del clients[client] # remove de clientes conectados
-            udp.sendto('INFO:disconnect'.encode(), client) # envia msg de controle para quem pediu pra sair para de ouvir o servidor
+            udp.sendto('INFO:disconnect'.encode(), client) # envia msg de controle para quem saiu parar de ouvir o servidor
+
+        if len(clients) == 0:
+            break
 
     tcp.close()
     return

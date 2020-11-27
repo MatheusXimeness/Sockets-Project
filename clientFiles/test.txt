@@ -1,1 +1,1 @@
-CRISTO N AGUENTO MAIS
+Pasta de arquivos do cliente para testar transferência de arquivos com o servidor
