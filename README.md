@@ -1,1 +1,1 @@
-Chatroom server with sockets in Python
+Chatroom server with sockets in Python.
